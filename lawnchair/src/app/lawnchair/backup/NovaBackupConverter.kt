@@ -1,5 +1,6 @@
 package app.lawnchair.backup
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.LauncherApps
@@ -8,8 +9,10 @@ import android.database.sqlite.SQLiteDatabase
 import android.net.Uri
 import android.os.Process
 import android.util.Log
+import app.lawnchair.hotseat.DisabledHotseat
 import app.lawnchair.preferences.PreferenceManager
 import app.lawnchair.preferences2.PreferenceManager2
+import app.lawnchair.preferences2.firstCached
 import com.android.launcher3.InvariantDeviceProfile
 import com.android.launcher3.LauncherSettings.Favorites
 import com.android.launcher3.model.DatabaseHelper
@@ -83,6 +86,14 @@ class NovaBackupConverter(
         val shortcutCount: Int,
         val iconPackPackage: String?,
         val iconPackLabel: String?,
+        val appearance: NovaAppearance = NovaAppearance(),
+    )
+
+    data class NovaAppearance(
+        val iconScale: Float? = null,
+        val showLabels: Boolean? = null,
+        val lockDesktop: Boolean? = null,
+        val hideSearchBar: Boolean = false,
     )
 
     private data class NovaConfig(
@@ -90,6 +101,7 @@ class NovaBackupConverter(
         val rows: Int?,
         val dockCols: Int?,
         val iconPackPackage: String?,
+        val appearance: NovaAppearance,
     )
 
     private data class ItemCounts(
@@ -129,6 +141,7 @@ class NovaBackupConverter(
                 folderCount = folders,
                 shortcutCount = shortcuts,
                 iconPackPackage = novaConfig.iconPackPackage,
+                appearance = novaConfig.appearance,
                 iconPackLabel = novaConfig.iconPackPackage?.let { packageName ->
                     resolveIconPackLabel(packageName)
                 },
@@ -199,7 +212,27 @@ class NovaBackupConverter(
             info.iconPackPackage?.let { prefs.iconPackPackage.set(it) }
         }
         InvariantDeviceProfile.INSTANCE.get(context).onPreferencesChanged(context)
+        info.appearance.showLabels?.let {
+            prefs2.showIconLabelsOnHomeScreen.set(it)
+            prefs2.showIconLabelsOnHomeScreenFolder.set(it)
+            prefs2.enableLabelInDock.set(it)
+        }
+        info.appearance.lockDesktop?.let { prefs2.lockHomeScreen.set(it) }
+        if (info.appearance.hideSearchBar) prefs2.hotseatMode.set(DisabledHotseat)
+        info.appearance.iconScale?.let { scale ->
+            val idp = InvariantDeviceProfile.INSTANCE.get(context)
+            val baseIconSize = idp.iconSize[InvariantDeviceProfile.INDEX_DEFAULT] / prefs2.homeIconSizeFactor.firstCached()
+            prefs2.homeIconSizeFactor.set((novaIconSizeDp() * scale / baseIconSize).coerceIn(0.5f, 1.5f))
+        }
+        InvariantDeviceProfile.INSTANCE.get(context).onPreferencesChanged(context)
     }
+
+    @SuppressLint("DiscouragedApi")
+    private fun novaIconSizeDp(): Float = runCatching {
+        val resources = context.packageManager.getResourcesForApplication("com.teslacoilsw.launcher")
+        val resource = resources.getIdentifier("app_icon_size", "dimen", "com.teslacoilsw.launcher")
+        resources.getDimension(resource) / resources.displayMetrics.density
+    }.getOrDefault(48f)
 
     private fun parseNovaConfig(xmlFile: File): NovaConfig {
         val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(xmlFile)
@@ -208,6 +241,9 @@ class NovaBackupConverter(
         var rows: Int? = null
         var dockCols: Int? = null
         var iconPackPackage: String? = null
+        var iconScale: Float? = null
+        var showLabels: Boolean? = null
+        var hideSearchBar = false
 
         val stringNodes = root.getElementsByTagName(NOVA_XML_TAG_STRING)
         for (i in 0 until stringNodes.length) {
@@ -225,6 +261,14 @@ class NovaBackupConverter(
                     val parts = text.split(":")
                     if (parts.size >= NOVA_ICON_PACK_MIN_PARTS) iconPackPackage = parts[NOVA_ICON_PACK_PACKAGE_INDEX]
                 }
+
+                "desktop_cellspecs" -> {
+                    val parts = text.split(':')
+                    iconScale = parts.getOrNull(0)?.toFloatOrNull()?.takeIf { it.isFinite() && it > 0 }
+                    showLabels = parts.getOrNull(1)?.toBooleanStrictOrNull()
+                }
+
+                "searchbar_placement" -> hideSearchBar = text == "NONE"
             }
         }
 
@@ -236,7 +280,15 @@ class NovaBackupConverter(
             if (name == NOVA_XML_KEY_DOCK_COLS) dockCols = value
         }
 
-        return NovaConfig(columns, rows, dockCols, iconPackPackage)
+        val booleanNodes = root.getElementsByTagName("boolean")
+        var lockDesktop: Boolean? = null
+        for (i in 0 until booleanNodes.length) {
+            val node = booleanNodes.item(i)
+            if (node.attributes.getNamedItem("name")?.nodeValue == "desktop_lock") {
+                lockDesktop = node.attributes.getNamedItem("value")?.nodeValue?.toBooleanStrictOrNull()
+            }
+        }
+        return NovaConfig(columns, rows, dockCols, iconPackPackage, NovaAppearance(iconScale, showLabels, lockDesktop, hideSearchBar))
     }
 
     private fun countItems(dbFile: File): ItemCounts {

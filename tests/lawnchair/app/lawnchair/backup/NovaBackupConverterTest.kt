@@ -40,4 +40,30 @@ class NovaBackupConverterTest {
         }
     }
 
+    @Test
+    fun readsNovaGridAndAppearanceBeforeImport() = runBlocking {
+        val database = temporaryFolder.newFile("nova.db")
+        SQLiteDatabase.openOrCreateDatabase(database, null).use {
+            it.execSQL("CREATE TABLE favorites (itemType INTEGER, container INTEGER, cellX REAL, cellY REAL, spanX REAL, spanY REAL)")
+            it.execSQL("INSERT INTO favorites VALUES (0, -100, 0, 0, 1, 1), (2, -101, 0, 0, 1, 1), (4, -100, 4, 1.5, 1, 0.5)")
+        }
+        val archive = temporaryFolder.newFile("test.novabackup")
+        ZipOutputStream(archive.outputStream()).use {
+            it.putNextEntry(ZipEntry("nova.db"))
+            database.inputStream().use { input -> input.copyTo(it) }
+            it.putNextEntry(ZipEntry("nova.xml"))
+            it.write("""<map><string name="desktop_grid">7x5 subgrid</string><int name="dock_grid_cols" value="5"/><string name="desktop_cellspecs">1.2:false:13.0:262914:true:sans-serif-condensed:true:false</string><string name="searchbar_placement">NONE</string><boolean name="desktop_lock" value="true"/></map>""".toByteArray())
+        }
+        val info = NovaBackupConverter(RuntimeEnvironment.getApplication(), Uri.fromFile(archive)).parseInfo()
+        assertEquals(5, info.columns)
+        assertEquals(7, info.rows)
+        assertEquals(5, info.hotseatCount)
+        assertEquals(1, info.appCount)
+        assertEquals(1, info.folderCount)
+        assertEquals(1, info.widgetCount)
+        assertEquals(1.2f, info.appearance.iconScale)
+        assertEquals(false, info.appearance.showLabels)
+        assertEquals(true, info.appearance.lockDesktop)
+        assertTrue(info.appearance.hideSearchBar)
+    }
 }
