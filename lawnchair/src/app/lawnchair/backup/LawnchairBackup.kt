@@ -125,12 +125,21 @@ class LawnchairBackup(
                 }
                 // Let grid changes finish against the old layout before installing the backup.
                 withContext(MODEL_EXECUTOR.asCoroutineDispatcher()) {
+                    val localIdentity = BackupInstallationIdentity.get(context)
+                    val sameInstallation = info.installationId.isNotEmpty() && info.installationId == localIdentity
+                    val bindings = if (sameInstallation) RestorableWidgetBindings.capture(context) else emptyMap()
+                    // No suspension between installing the DB and restoring validated widget flags:
+                    // a workspace loader must not see the intermediate ID_NOT_VALID state.
                     BackupLayoutDatabase.install(context, layout, info.gridState, DeviceGridState(LauncherAppState.getIDP(context)))
                     val dbController = ModelDbController(context)
                     val database = dbController.db
                     database.beginTransaction()
                     try {
+                        val preserved = RestorableWidgetBindings.collect(database, info.installationId, localIdentity, bindings)
                         check(RestoreDbTask.performRestore(context, dbController)) { "Unable to restore launcher layout" }
+                        if (preserved.isNotEmpty()) {
+                            RestorableWidgetBindings.apply(database, preserved, RestorableWidgetBindings.capture(context))
+                        }
                         database.setTransactionSuccessful()
                     } finally {
                         database.endTransaction()
@@ -217,6 +226,7 @@ class LawnchairBackup(
                 val idp = LauncherAppState.getIDP(context)
                 val colorHints = WallpaperManagerCompat.INSTANCE.get(context).wallpaperColors?.colorHints ?: 0
                 val info = BackupInfo.newBuilder()
+                    .setInstallationId(BackupInstallationIdentity.get(context))
                     .setLawnchairVersion(BuildConfig.VERSION_CODE)
                     .setBackupVersion(BACKUP_VERSION)
                     .setCreatedAt(Timestamp.newBuilder().setSeconds(System.currentTimeMillis() / 1000))
