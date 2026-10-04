@@ -1070,4 +1070,20 @@
     <string name="lawnchair_action_failed">Failed to trigger action</string>
 
     <string name="please_wait">Please wait…</string>
+    <string name="automatic_backup_title">Automatic backups</string>
+    <string name="automatic_backup_description">Check for changes on schedule and export only when layout or settings have changed. Choose a folder Syncthing can sync. Android may delay checks to save battery. Wallpaper is not included.</string>
+    <string name="automatic_backup_folder">Backup folder</string>
+    <string name="automatic_backup_choose_folder">Choose a folder, such as backups/lawnchair</string>
+    <string name="automatic_backup_frequency">Check for changes</string>
+    <string name="automatic_backup_daily">Daily</string>
+    <string name="automatic_backup_weekly">Weekly</string>
+    <string name="automatic_backup_retention">Versions to keep</string>
+    <string name="automatic_backup_keep_count">Keep %1$d backups</string>
+    <string name="automatic_backup_now">Back up now</string>
+    <string name="automatic_backup_never">No successful export yet</string>
+    <string name="automatic_backup_last_success">Last successful export: %1$s</string>
+    <string name="automatic_backup_queued">Backup queued. The result will appear here.</string>
+    <string name="automatic_backup_permission_error">Folder access lost. Choose the backup folder again.</string>
+    <string name="automatic_backup_retention_error">Backup saved, but old versions could not be removed. Tap to retry.</string>
+    <string name="automatic_backup_export_error">Export failed. Check free space and folder access, then tap to retry.</string>
 </resources>

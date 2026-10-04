@@ -3,6 +3,7 @@ package app.lawnchair.ui.preferences.destinations
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import app.lawnchair.backup.ui.AutomaticBackupPreferences
 import app.lawnchair.backup.ui.restoreBackupOpener
 import app.lawnchair.backup.ui.restoreNovaBackupOpener
 import app.lawnchair.ui.preferences.LocalIsExpandedScreen
@@ -22,6 +23,7 @@ fun BackupAndRestorePreference(
         backArrowVisible = !LocalIsExpandedScreen.current,
         modifier = modifier,
     ) {
+        AutomaticBackupPreferences()
         PreferenceGroup {
             NavigationActionPreference(
                 label = stringResource(R.string.create_backup),

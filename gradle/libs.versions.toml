@@ -64,6 +64,7 @@ androidx-test-rules = { group = "androidx.test", name = "rules", version.ref = "
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "testRunner" }
 androidx-uiautomator = "androidx.test.uiautomator:uiautomator:2.4.0"
 androidx-window = "androidx.window:window:1.5.1"
+androidx-work-runtime = "androidx.work:work-runtime:2.10.5"
 
 # Compose
 compose-bom = "androidx.compose:compose-bom:2026.09.00"
