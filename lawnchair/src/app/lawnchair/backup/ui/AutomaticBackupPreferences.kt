@@ -40,6 +40,7 @@ fun AutomaticBackupPreferences() {
         settings.preferences.registerOnSharedPreferenceChangeListener(listener)
         onDispose { settings.preferences.unregisterOnSharedPreferenceChangeListener(listener) }
     }
+    val automationEnabled = remember(revision) { settings.automationEnabled }
     val enabled = remember(revision) { settings.enabled }
     val tree = remember(revision) { settings.treeUri }
     val retention = remember(revision) { settings.retention }
@@ -126,6 +127,13 @@ fun AutomaticBackupPreferences() {
                 AutomaticBackupSettings.backUpNow(context)
                 Toast.makeText(context, R.string.automatic_backup_queued, Toast.LENGTH_SHORT).show()
             },
+        )
+        SwitchPreference(
+            checked = automationEnabled,
+            onCheckedChange = { update { putBoolean("automation_enabled", it) } },
+            label = stringResource(R.string.backup_automation_title),
+            description = stringResource(R.string.backup_automation_description),
+            enabled = tree != null,
         )
         if (lastError != null) {
             ClickablePreference(

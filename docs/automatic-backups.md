@@ -39,3 +39,43 @@ Android schedules background work opportunistically. Low battery, low storage,
 Doze, OEM restrictions, and force-stopping the app can delay exports. Reopen
 Lawnchair after a force-stop. If folder access is lost, choose the folder again.
 The settings screen reports export failures and retention failures separately.
+
+## Tasker and adb intents
+
+Choose the backup folder and enable **Allow automation intents** first. The opt-in
+allows any app to request an export to that folder, at most once per minute.
+Automation does not need the daily schedule enabled. Requests are serialized with
+manual backups, and disabling the opt-in also blocks queued external requests.
+
+For a changed-only check in the debug installation:
+
+```sh
+adb shell am broadcast -n app.lawnchair.debug/app.lawnchair.backup.BackupAutomationReceiver \
+  -a app.lawnchair.action.BACKUP
+```
+
+Add `--ez force true` to create a version even without changes. The ordered
+broadcast reports whether the request was queued or rejected; completion and
+errors appear in Backup & restore. In Tasker, use **Send Intent**, action
+`app.lawnchair.action.BACKUP`, package `app.lawnchair.debug`, class
+`app.lawnchair.backup.BackupAutomationReceiver`, target **Broadcast Receiver**.
+The optional Boolean extra is `force:true`.
+
+To choose a backup and open its restore review, send an Activity intent with action
+`app.lawnchair.action.RESTORE` and class `app.lawnchair.backup.BackupRestoreActivity`.
+Without Data, this opens the document picker. The optional String extra `format`
+is `lawnchair` (default) or `nova`:
+
+```sh
+adb shell am start -n app.lawnchair.debug/app.lawnchair.backup.BackupRestoreActivity \
+  -a app.lawnchair.action.RESTORE --es format nova
+```
+
+Tasker can supply a readable `content://` URI as Data with a read permission grant.
+ADB can supply `-d 'content://PROVIDER/DOCUMENT'` when Lawnchair already holds a
+grant covering that document. The adb shell generally cannot grant access to an
+arbitrary Storage Access Framework URI; use the picker in that case. Raw filesystem
+paths are rejected. Restores always open the normal review screen and require
+tapping Restore. The automation opt-in controls unattended exports;
+opening a restore review does not require it. Use the installed package name in
+place of `app.lawnchair.debug` for other build variants.

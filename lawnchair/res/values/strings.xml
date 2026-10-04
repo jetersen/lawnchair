@@ -1070,6 +1070,9 @@
     <string name="lawnchair_action_failed">Failed to trigger action</string>
 
     <string name="please_wait">Please wait…</string>
+    <string name="backup_automation_title">Allow automation intents</string>
+    <string name="backup_automation_description">Allow Tasker and other apps to request backups to the selected folder, at most once per minute. Restore intents open a review screen.</string>
+    <string name="backup_automation_invalid_uri">Choose a readable backup document and Lawnchair or Nova format.</string>
     <string name="automatic_backup_title">Automatic backups</string>
     <string name="automatic_backup_description">Check for changes on schedule and export only when layout or settings have changed. Choose a folder Syncthing can sync. Android may delay checks to save battery. Wallpaper is not included.</string>
     <string name="automatic_backup_folder">Backup folder</string>

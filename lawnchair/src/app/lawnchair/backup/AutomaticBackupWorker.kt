@@ -26,7 +26,9 @@ class AutomaticBackupWorker(context: Context, parameters: WorkerParameters) : Co
     private suspend fun export(): Result {
         val settings = AutomaticBackupSettings(applicationContext)
         val tree = settings.treeUri ?: return Result.success()
-        if (!settings.enabled && !inputData.getBoolean("manual", false)) return Result.success()
+        val external = inputData.getBoolean("external", false)
+        if (external && !settings.automationEnabled) return Result.success()
+        if (!settings.enabled && !external && !inputData.getBoolean("manual", false)) return Result.success()
         val revision = settings.revision
         val resolver = applicationContext.contentResolver
         var pending: Uri? = null

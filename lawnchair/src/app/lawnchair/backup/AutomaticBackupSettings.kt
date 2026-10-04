@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit
 /** Device-local settings deliberately excluded from launcher exports (URI grants are not portable). */
 internal class AutomaticBackupSettings(context: Context) {
     val preferences: SharedPreferences = context.getSharedPreferences("automatic_backups", Context.MODE_PRIVATE)
+    val automationEnabled get() = preferences.getBoolean("automation_enabled", false)
     val enabled get() = preferences.getBoolean("enabled", false)
     val treeUri get() = preferences.getString("tree", null)?.let(Uri::parse)
     val retention get() = preferences.getInt("retention", 14).coerceIn(1, 100)
@@ -37,6 +38,7 @@ internal class AutomaticBackupSettings(context: Context) {
     companion object {
         private const val PERIODIC_WORK = "automatic-launcher-backup"
         private const val MANUAL_WORK = "manual-launcher-backup"
+        private const val AUTOMATION_WORK = "automation-launcher-backup"
 
         fun schedule(context: Context) {
             val settings = AutomaticBackupSettings(context)
@@ -51,11 +53,11 @@ internal class AutomaticBackupSettings(context: Context) {
             manager.enqueueUniquePeriodicWork(PERIODIC_WORK, ExistingPeriodicWorkPolicy.UPDATE, request)
         }
 
-        fun backUpNow(context: Context) {
+        fun backUpNow(context: Context, force: Boolean = true, external: Boolean = false) {
             WorkManager.getInstance(context).enqueueUniqueWork(
-                MANUAL_WORK,
+                if (external) AUTOMATION_WORK else MANUAL_WORK,
                 ExistingWorkPolicy.KEEP,
-                OneTimeWorkRequestBuilder<AutomaticBackupWorker>().setInputData(workDataOf("manual" to true)).build(),
+                OneTimeWorkRequestBuilder<AutomaticBackupWorker>().setInputData(workDataOf("manual" to force, "external" to external)).build(),
             )
         }
     }
